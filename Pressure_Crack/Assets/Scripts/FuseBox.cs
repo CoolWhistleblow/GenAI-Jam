@@ -9,6 +9,9 @@ public class FuseBox : MonoBehaviour
     [SerializeField] private GameObject normalModel;
     [SerializeField] private GameObject brokenModel;
 
+    [Header("Lighting Connection")]
+    [SerializeField] private CockpitLighting cockpitLighting;
+
     [Header("Audio Feedback")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip blowSound;
@@ -19,11 +22,25 @@ public class FuseBox : MonoBehaviour
     {
         UpdateVisuals();
 
-        if (audioSource == null) audioSource = GetComponent<AudioSource>();
-        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        if (cockpitLighting == null)
+        {
+            cockpitLighting = FindFirstObjectByType<CockpitLighting>();
+        }
+
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+        }
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
         audioSource.spatialBlend = 1.0f;
 
-        if (blowSound == null) blowSound = Resources.Load<AudioClip>("SFX/fuse_blow");
+        if (blowSound == null)
+        {
+            blowSound = Resources.Load<AudioClip>("SFX/fuse_blow");
+        }
     }
 
     public void BreakFuseBox()
@@ -32,12 +49,17 @@ public class FuseBox : MonoBehaviour
         isBroken = true;
         UpdateVisuals();
 
+        if (cockpitLighting != null)
+        {
+            cockpitLighting.SetPowerState(false);
+        }
+
         if (audioSource != null && blowSound != null)
         {
             audioSource.PlayOneShot(blowSound);
         }
 
-        Debug.LogWarning("[HAZARD] Fuse box blew! Submarine descent halted!");
+        Debug.LogWarning("[HAZARD] Fuse box blew! Submarine power lost!");
     }
 
     public void FixFuseBox()
@@ -45,10 +67,15 @@ public class FuseBox : MonoBehaviour
         if (!isBroken) return;
         isBroken = false;
         UpdateVisuals();
-        Debug.Log("[REPAIRED] Fuse box restored! Resuming descent.");
+
+        if (cockpitLighting != null)
+        {
+            cockpitLighting.SetPowerState(true);
+        }
+
+        Debug.Log("[REPAIRED] Fuse box restored! Power online.");
     }
 
-    // Alias for compatibility with FuseBoxMiniGameUI
     public void FixBox()
     {
         FixFuseBox();

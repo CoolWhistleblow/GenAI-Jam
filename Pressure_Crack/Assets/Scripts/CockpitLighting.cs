@@ -2,86 +2,89 @@ using UnityEngine;
 
 public class CockpitLighting : MonoBehaviour
 {
-    [Header("System References")]
-    [SerializeField] private FuseBox fuseBox;
+    [Header("Lighting References")]
+    [SerializeField] private Light[] mainCabinLights;
+    [SerializeField] private Light[] redAlarmLights;
 
-    [Header("Main Lights")]
-    [SerializeField] private Light mainCabinLight;
-    [SerializeField] private Light redAlarmLight;
+    [Header("Alarm Visual Settings")]
+    [SerializeField] private float pulseSpeed = 4.0f;
+    [SerializeField] private float minIntensity = 0.2f;
+    [SerializeField] private float maxIntensity = 2.5f;
 
-    [Header("Station Accent Lights")]
-    [SerializeField] private Light fuseBoxIndicator;
-    [SerializeField] private Light pumpIndicator;
-    [SerializeField] private Light controlBoxLight;
-
-    [Header("Panic Strobe Settings")]
-    [SerializeField] private float flashSpeed = 6.0f;
-    [SerializeField] private float peakIntensity = 4.5f;
-    [SerializeField] private float minRedIntensity = 0.12f;
-
-    [Header("Audio Feedback")]
+    [Header("Alarm Audio Settings")]
     [SerializeField] private AudioSource alarmAudioSource;
-    [SerializeField] private AudioClip alarmKlaxonSound;
+    [SerializeField] private AudioClip alarmSound;
+
+    private bool isPowerOn = true;
 
     private void Start()
     {
-        if (fuseBox == null)
+        if (alarmAudioSource == null)
         {
-            fuseBox = FindFirstObjectByType<FuseBox>();
+            alarmAudioSource = GetComponent<AudioSource>();
+        }
+        if (alarmAudioSource == null)
+        {
+            alarmAudioSource = gameObject.AddComponent<AudioSource>();
+        }
+        alarmAudioSource.spatialBlend = 0.0f;
+
+        if (alarmSound == null)
+        {
+            alarmSound = Resources.Load<AudioClip>("SFX/emergency_alarm");
         }
 
-        if (alarmAudioSource == null) alarmAudioSource = GetComponent<AudioSource>();
-        if (alarmAudioSource == null) alarmAudioSource = gameObject.AddComponent<AudioSource>();
-        alarmAudioSource.loop = true;
-        alarmAudioSource.spatialBlend = 0.5f;
-
-        if (alarmKlaxonSound == null) alarmKlaxonSound = Resources.Load<AudioClip>("SFX/emergency_alarm");
+        SetPowerState(isPowerOn);
     }
 
     private void Update()
     {
-        bool isPowerOff = (fuseBox != null && fuseBox.IsBroken);
-
-        // 1. POWER NORMAL
-        if (!isPowerOff)
+        if (!isPowerOn)
         {
-            if (mainCabinLight != null && !mainCabinLight.gameObject.activeSelf) mainCabinLight.gameObject.SetActive(true);
-            if (fuseBoxIndicator != null && !fuseBoxIndicator.gameObject.activeSelf) fuseBoxIndicator.gameObject.SetActive(true);
-            if (pumpIndicator != null && !pumpIndicator.gameObject.activeSelf) pumpIndicator.gameObject.SetActive(true);
-            if (controlBoxLight != null && !controlBoxLight.gameObject.activeSelf) controlBoxLight.gameObject.SetActive(true);
-
-            if (redAlarmLight != null && redAlarmLight.gameObject.activeSelf)
-                redAlarmLight.gameObject.SetActive(false);
-
-            if (alarmAudioSource != null && alarmAudioSource.isPlaying)
+            // Pulse red lights during blackout/alarm
+            float intensity = Mathf.Lerp(minIntensity, maxIntensity, (Mathf.Sin(Time.time * pulseSpeed) + 1f) / 2f);
+            foreach (Light redLight in redAlarmLights)
             {
-                alarmAudioSource.Stop();
+                if (redLight != null) redLight.intensity = intensity;
             }
+        }
+    }
 
-            return;
+    public void SetPowerState(bool powerState)
+    {
+        isPowerOn = powerState;
+
+        // Toggle main white lights
+        foreach (Light whiteLight in mainCabinLights)
+        {
+            if (whiteLight != null) whiteLight.gameObject.SetActive(powerState);
         }
 
-        // 2. POWER FAILURE / BLACKOUT
-        if (mainCabinLight != null && mainCabinLight.gameObject.activeSelf) mainCabinLight.gameObject.SetActive(false);
-        if (fuseBoxIndicator != null && fuseBoxIndicator.gameObject.activeSelf) fuseBoxIndicator.gameObject.SetActive(false);
-        if (pumpIndicator != null && pumpIndicator.gameObject.activeSelf) pumpIndicator.gameObject.SetActive(false);
-        if (controlBoxLight != null && controlBoxLight.gameObject.activeSelf) controlBoxLight.gameObject.SetActive(false);
-
-        if (alarmAudioSource != null && alarmKlaxonSound != null && !alarmAudioSource.isPlaying)
+        // Toggle red alarm lights
+        foreach (Light redLight in redAlarmLights)
         {
-            alarmAudioSource.clip = alarmKlaxonSound;
-            alarmAudioSource.loop = true;
-            alarmAudioSource.Play();
+            if (redLight != null) redLight.gameObject.SetActive(!powerState);
         }
 
-        // 3. STROBE RED LIGHT
-        if (redAlarmLight != null)
+        // Alarm audio playback matching BilgePumpStation pattern
+        if (alarmAudioSource != null && alarmSound != null)
         {
-            if (!redAlarmLight.gameObject.activeSelf) redAlarmLight.gameObject.SetActive(true);
-            if (!redAlarmLight.enabled) redAlarmLight.enabled = true;
-
-            bool isFlash = (Mathf.Sin(Time.time * flashSpeed) > 0.2f);
-            redAlarmLight.intensity = isFlash ? peakIntensity : minRedIntensity;
+            if (!powerState)
+            {
+                if (!alarmAudioSource.isPlaying)
+                {
+                    alarmAudioSource.clip = alarmSound;
+                    alarmAudioSource.loop = true;
+                    alarmAudioSource.Play();
+                }
+            }
+            else
+            {
+                if (alarmAudioSource.isPlaying)
+                {
+                    alarmAudioSource.Stop();
+                }
+            }
         }
     }
 }

@@ -24,7 +24,8 @@ public class HullLeak : MonoBehaviour
         if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.spatialBlend = 1.0f;
         audioSource.minDistance = 1.0f;
-        audioSource.maxDistance = 15.0f;
+        audioSource.maxDistance = 12.0f;
+        audioSource.volume = 0.35f; // Moderate volume for water leakage
 
         if (spraySound == null) spraySound = Resources.Load<AudioClip>("SFX/hull_breach_spray");
         if (sealSound == null) sealSound = Resources.Load<AudioClip>("SFX/leak_seal_weld");
@@ -42,6 +43,7 @@ public class HullLeak : MonoBehaviour
         {
             audioSource.clip = spraySound;
             audioSource.loop = true;
+            audioSource.volume = 0.35f; // Keep leakage sound moderate
             audioSource.Play();
         }
 

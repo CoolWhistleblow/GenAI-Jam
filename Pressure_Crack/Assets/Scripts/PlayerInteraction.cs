@@ -28,8 +28,8 @@ public class PlayerInteraction : MonoBehaviour
     [SerializeField] private MonoBehaviour cameraLookScript;
 
     [Header("Pumping Camera Shake")]
-    [SerializeField] private float shakeIntensity = 0.025f; // Offset distance (adjust to taste)
-    [SerializeField] private float shakeSpeed = 25.0f;     // Vibrations per second
+    [SerializeField] private float shakeIntensity = 0.025f;
+    [SerializeField] private float shakeSpeed = 25.0f;
 
     [Header("Ring Color Styling")]
     [SerializeField] private Color startColor = Color.white;
@@ -66,8 +66,15 @@ public class PlayerInteraction : MonoBehaviour
 
         if (audioSource == null) audioSource = GetComponent<AudioSource>();
         if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.spatialBlend = 0f; // 2D so player always hears interactions directly
+        audioSource.volume = 1f;
 
         if (fusePickupSound == null) fusePickupSound = Resources.Load<AudioClip>("SFX/fuse_pickup");
+
+        if (GetComponent<AudioSource>() == null)
+        {
+            gameObject.AddComponent<AudioSource>();
+        }
 
         RefreshHeldFuseVisibility();
     }
@@ -123,9 +130,14 @@ public class PlayerInteraction : MonoBehaviour
                         {
                             hasSpareFuse = false;
                             RefreshHeldFuseVisibility();
+
+                            if (audioSource != null && fusePickupSound != null)
+                            {
+                                audioSource.PlayOneShot(fusePickupSound, 2.0f);
+                            }
+
                             if (FuseBoxMiniGameUI.Instance != null)
                             {
-                                // Pass "box" here so the minigame knows which box to fix!
                                 FuseBoxMiniGameUI.Instance.OpenMiniGame(box);
                             }
                         }
@@ -138,7 +150,7 @@ public class PlayerInteraction : MonoBehaviour
 
             // CASE B: HANDS ARE FREE
 
-            // Pickup Fuse
+            // Pickup Fuse from Fuse Rack / Dispenser
             if (hit.collider.TryGetComponent(out SpareFuse spare))
             {
                 if (hit.distance <= fuseDistance)
@@ -155,7 +167,7 @@ public class PlayerInteraction : MonoBehaviour
 
                         if (audioSource != null && fusePickupSound != null)
                         {
-                            audioSource.PlayOneShot(fusePickupSound);
+                            audioSource.PlayOneShot(fusePickupSound, 2.5f);
                         }
                     }
                     UpdateProgressRing(0f);
@@ -191,12 +203,12 @@ public class PlayerInteraction : MonoBehaviour
                 return;
             }
 
-            // Bilge Pump (Locks controls + camera shake while holding [E])
+            // Bilge Pump
             if (hit.collider.TryGetComponent(out BilgePumpStation pump))
             {
                 ClearActiveLeak();
                 activePump = pump;
-                DisplayPrompt("Hold [E] to Pump Bilge");
+                DisplayPrompt("Hold [E] to Pump water out");
 
                 if (eHeld)
                 {
@@ -322,6 +334,8 @@ public class PlayerInteraction : MonoBehaviour
         }
 
         GameObject spawnedFuse = Instantiate(droppedFusePrefab, spawnPosition, playerCamera.transform.rotation);
+
+
 
         Collider fuseCollider = spawnedFuse.GetComponent<Collider>();
         if (playerCollider != null && fuseCollider != null)

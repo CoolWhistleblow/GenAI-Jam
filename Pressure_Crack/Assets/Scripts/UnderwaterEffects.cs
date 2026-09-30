@@ -12,6 +12,10 @@ public class UnderwaterEffects : MonoBehaviour
     [SerializeField] private FirstPersonController playerController;
     [SerializeField] private float underwaterSpeedMultiplier = 0.4f;
 
+    [Header("Audio Feedback")]
+    [SerializeField] private AudioSource underwaterAudioSource;
+    [SerializeField] private AudioClip underwaterAmbience;
+
     private float defaultMoveSpeed;
     private float defaultSprintSpeed;
 
@@ -26,6 +30,13 @@ public class UnderwaterEffects : MonoBehaviour
         defaultFogState = RenderSettings.fog;
         defaultFogColor = RenderSettings.fogColor;
         defaultFogDensity = RenderSettings.fogDensity;
+
+        if (underwaterAudioSource == null) underwaterAudioSource = GetComponent<AudioSource>();
+        if (underwaterAudioSource == null) underwaterAudioSource = gameObject.AddComponent<AudioSource>();
+        underwaterAudioSource.loop = true;
+        underwaterAudioSource.spatialBlend = 0f;
+
+        if (underwaterAmbience == null) underwaterAmbience = Resources.Load<AudioClip>("SFX/underwater_ambience");
 
         // Non-generic fetches completely prevent CS0411 bracket stripping errors
         if (playerController == null)
@@ -61,6 +72,12 @@ public class UnderwaterEffects : MonoBehaviour
                 RenderSettings.fogColor = underwaterColor;
                 RenderSettings.fogDensity = underwaterFogDensity;
 
+                if (underwaterAudioSource != null && underwaterAmbience != null)
+                {
+                    underwaterAudioSource.clip = underwaterAmbience;
+                    underwaterAudioSource.Play();
+                }
+
                 if (playerController != null)
                 {
                     playerController.MoveSpeed = defaultMoveSpeed * underwaterSpeedMultiplier;
@@ -72,6 +89,11 @@ public class UnderwaterEffects : MonoBehaviour
                 RenderSettings.fog = defaultFogState;
                 RenderSettings.fogColor = defaultFogColor;
                 RenderSettings.fogDensity = defaultFogDensity;
+
+                if (underwaterAudioSource != null)
+                {
+                    underwaterAudioSource.Stop();
+                }
 
                 if (playerController != null)
                 {
