@@ -6,6 +6,11 @@ public class HullLeak : MonoBehaviour
     [SerializeField] private GameObject sprayParticleFX;
     [SerializeField] private float requiredSealingTime = 2.0f; // Hold LMB for 2 seconds to seal
 
+    [Header("Audio Feedback")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip spraySound;
+    [SerializeField] private AudioClip sealSound;
+
     public bool IsActive { get; private set; } = false;
     private float currentSealTimer = 0f;
 
@@ -14,6 +19,15 @@ public class HullLeak : MonoBehaviour
     private void Start()
     {
         if (sprayParticleFX != null) sprayParticleFX.SetActive(false);
+
+        if (audioSource == null) audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.spatialBlend = 1.0f;
+        audioSource.minDistance = 1.0f;
+        audioSource.maxDistance = 15.0f;
+
+        if (spraySound == null) spraySound = Resources.Load<AudioClip>("SFX/hull_breach_spray");
+        if (sealSound == null) sealSound = Resources.Load<AudioClip>("SFX/leak_seal_weld");
     }
 
     public void TriggerLeak()
@@ -23,6 +37,13 @@ public class HullLeak : MonoBehaviour
         IsActive = true;
         currentSealTimer = 0f;
         if (sprayParticleFX != null) sprayParticleFX.SetActive(true);
+
+        if (audioSource != null && spraySound != null)
+        {
+            audioSource.clip = spraySound;
+            audioSource.loop = true;
+            audioSource.Play();
+        }
 
         if (WaterManager.Instance != null)
         {
@@ -57,6 +78,15 @@ public class HullLeak : MonoBehaviour
         IsActive = false;
         currentSealTimer = 0f;
         if (sprayParticleFX != null) sprayParticleFX.SetActive(false);
+
+        if (audioSource != null)
+        {
+            audioSource.Stop();
+            if (sealSound != null)
+            {
+                audioSource.PlayOneShot(sealSound);
+            }
+        }
 
         if (WaterManager.Instance != null)
         {

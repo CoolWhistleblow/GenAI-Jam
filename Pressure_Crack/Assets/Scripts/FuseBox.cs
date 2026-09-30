@@ -2,45 +2,61 @@ using UnityEngine;
 
 public class FuseBox : MonoBehaviour
 {
-    public static FuseBox Instance { get; private set; }
-
     [Header("Fuse Box State")]
-    public bool IsBroken = false;
+    [SerializeField] private bool isBroken = false;
 
     [Header("3D Model References")]
     [SerializeField] private GameObject normalModel;
     [SerializeField] private GameObject brokenModel;
 
-    private void Awake()
-    {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
-    }
+    [Header("Audio Feedback")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip blowSound;
+
+    public bool IsBroken => isBroken;
 
     private void Start()
     {
         UpdateVisuals();
+
+        if (audioSource == null) audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.spatialBlend = 1.0f;
+
+        if (blowSound == null) blowSound = Resources.Load<AudioClip>("SFX/fuse_blow");
     }
 
     public void BreakFuseBox()
     {
-        if (IsBroken) return;
-        IsBroken = true;
+        if (isBroken) return;
+        isBroken = true;
         UpdateVisuals();
+
+        if (audioSource != null && blowSound != null)
+        {
+            audioSource.PlayOneShot(blowSound);
+        }
+
         Debug.LogWarning("[HAZARD] Fuse box blew! Submarine descent halted!");
     }
 
     public void FixFuseBox()
     {
-        if (!IsBroken) return;
-        IsBroken = false;
+        if (!isBroken) return;
+        isBroken = false;
         UpdateVisuals();
         Debug.Log("[REPAIRED] Fuse box restored! Resuming descent.");
     }
 
+    // Alias for compatibility with FuseBoxMiniGameUI
+    public void FixBox()
+    {
+        FixFuseBox();
+    }
+
     private void UpdateVisuals()
     {
-        if (normalModel != null) normalModel.SetActive(!IsBroken);
-        if (brokenModel != null) brokenModel.SetActive(IsBroken);
+        if (normalModel != null) normalModel.SetActive(!isBroken);
+        if (brokenModel != null) brokenModel.SetActive(isBroken);
     }
 }

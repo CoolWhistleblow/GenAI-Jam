@@ -5,9 +5,13 @@ public class LeakSpawner : MonoBehaviour
     [Header("Leak Locations")]
     [SerializeField] private HullLeak[] leakPoints;
 
-    [Header("Spawn Intervals (Seconds)")]
-    [SerializeField] private float minSpawnInterval = 8f;
-    [SerializeField] private float maxSpawnInterval = 18f;
+    [Header("Surface Spawn Intervals (0m Depth)")]
+    [SerializeField] private float surfaceMinInterval = 12f;
+    [SerializeField] private float surfaceMaxInterval = 20f;
+
+    [Header("Abyss Spawn Intervals (11,000m Depth)")]
+    [SerializeField] private float abyssMinInterval = 3f;
+    [SerializeField] private float abyssMaxInterval = 7f;
 
     private float spawnTimer;
 
@@ -66,6 +70,17 @@ public class LeakSpawner : MonoBehaviour
 
     private void ResetTimer()
     {
-        spawnTimer = Random.Range(minSpawnInterval, maxSpawnInterval);
+        // Calculate depth ratio (0.0 at surface -> 1.0 at max depth)
+        float depthRatio = 0f;
+        if (DescentManager.Instance != null)
+        {
+            depthRatio = Mathf.Clamp01(DescentManager.Instance.currentDepth / DescentManager.Instance.maxDepth);
+        }
+
+        // Dynamically shrink spawn intervals as depth increases
+        float currentMin = Mathf.Lerp(surfaceMinInterval, abyssMinInterval, depthRatio);
+        float currentMax = Mathf.Lerp(surfaceMaxInterval, abyssMaxInterval, depthRatio);
+
+        spawnTimer = Random.Range(currentMin, currentMax);
     }
 }
